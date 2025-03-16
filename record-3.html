@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Record 3</title>
+    </head>
+    <body>
+        <div class="container">
+            <h1>VOICE RECORDING DEMO FTW, BRO</h1>
+            <span>Recorder</span>
+            <audio id="recorder" muted hidden></audio>
+            <div>
+                <button id="start">Record</button>
+                <button id="stop">Stop Recording</button>
+            </div>
+            <hr>
+
+            <span id="Result"><audio id="player" controls></audio></span>
+            
+        </div>
+    </body>
+    <style>
+  .container {
+    display: flex;
+    flex-direction: column;
+
+    >* {
+      margin: 8px;
+    }
+  }
+
+  button {
+    max-width: 300px;
+  }
+    </style>
+    <script>
+  let mediaRecorder
+  let stream
+  let chunks = []
+  let isRecording = false
+
+  let resultRef = document.querySelector("#Result")
+  resultRef.style.display = 'none'
+  let recorderRef = document.querySelector("#recorder")
+  let playerRef = document.querySelector("#player")
+  let startBtn = document.querySelector("#start")
+  let stopBtn = document.querySelector("#stop")
+
+  let constraints = {
+    audio: true,
+    video: false
+  }
+
+  //check brower 
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    console.log("getUserMedia supported")
+  } else {
+    console.log("getUserMedia is not supported on your browser!")
+  }
+
+  const handleSuccess = function (xstream) {
+    console.log('xstream',xstream)
+    stream = xstream
+    stream.oninactive = () => {
+      console.log("Stream ended!")
+    };
+    recorderRef.srcObject = xstream
+    mediaRecorder = new MediaRecorder(xstream)
+    console.log(mediaRecorder)
+
+    mediaRecorder.ondataavailable = onMediaRecorderDataAvailable
+    mediaRecorder.onstop = onMediaRecorderStop
+    recorderRef.play()
+    mediaRecorder.start()
+  }
+
+  const onMediaRecorderDataAvailable = function (e) {
+    chunks.push(e.data)
+  }
+
+  const onMediaRecorderStop= function (e) {
+    const blob = new Blob(chunks, {
+      'type': 'audio/ogg; codecs=opus'
+    })
+    const audioURL = window.URL.createObjectURL(blob)
+    playerRef.src = audioURL
+    chunks = []
+    stream.getAudioTracks().forEach(track => track.stop())
+    stream = null
+  }
+
+  function handleError(error) {
+    console.log("navigator.getUserMedia error: ", error)
+  }
+
+  function startRecording() {
+    if (isRecording) return
+    resultRef.style.display = 'none'
+    isRecording = true
+    startBtn.innerHTML = 'Recording...'
+    playerRef.src = ''
+    navigator.mediaDevices
+      .getUserMedia(constraints)
+      .then(handleSuccess)
+      .catch(handleError())
+  }
+
+  navigator.mediaDevices
+  .getUserMedia({audio: true, video: false})
+  .then(handleSuccess);
+
+  function stopRecording() {
+    if (!isRecording) return
+    isRecording = false
+    startBtn.innerHTML = 'Record'
+    recorderRef.pause()
+    mediaRecorder.stop()
+    resultRef.style.display = 'block'
+  }
+
+  startBtn.addEventListener('click', function () {
+    startRecording()
+  })
+
+  stopBtn.addEventListener('click', function () {
+    stopRecording()
+  })
+    </script>
+</html>
